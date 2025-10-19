@@ -1,0 +1,10 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+}
+input, button {
+  outline: none;
+}
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
