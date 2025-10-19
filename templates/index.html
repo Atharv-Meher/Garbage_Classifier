@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garbage Segregation Flask</title>
+<style>
+body { background:#1a1a1a; color:#fff; font-family:sans-serif; text-align:center; }
+img { max-width:400px; margin:10px; border:2px solid #4CAF50; }
+pre { background:#333; padding:10px; border-radius:5px; text-align:left; display:inline-block; max-width:90%; overflow:auto;}
+input, button { padding:10px; margin:10px; }
+</style>
+</head>
+<body>
+<h1>Garbage Segregation (YOLO + Flask)</h1>
+
+<form method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept="image/*" required>
+    <button type="submit">Upload & Classify</button>
+</form>
+
+{% if output_image_url %}
+<h2>Detected Image</h2>
+<img src="{{ url_for('static', filename='uploads/' + output_image_url.split('/')[-1]) }}" alt="Detected Image">
+<h2>JSON Output</h2>
+<pre>{{ result_json | tojson(indent=2) }}</pre>
+{% endif %}
+</body>
+</html>
