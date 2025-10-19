@@ -1,5 +1,0 @@
-flask
-ultralytics>=8.0.134
-opencv-python
-numpy
-Pillow
