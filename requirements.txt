@@ -1,6 +1,5 @@
-streamlit>=1.20.0
+flask
 ultralytics>=8.0.134
 opencv-python
-Pillow
 numpy
-pandas
+Pillow
