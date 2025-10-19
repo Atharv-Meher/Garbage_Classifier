@@ -1,31 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zero-Shot Garbage Classifier</title>
-  <link rel="stylesheet" href="style.css" />
-  <script type="module" src="script.js" defer></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Garbage Classification</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
+<script type="module">
+import * as ort from "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js";
+import { CLIP } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2";
+
+// Global state
+let model;
+let isModelLoaded = false;
+
+// Define candidate labels (extendable)
+const LABELS = [
+  "biodegradable waste",
+  "non biodegradable waste",
+  "recyclable waste",
+  "metal waste",
+  "plastic waste",
+  "paper waste",
+  "organic food waste",
+  "glass waste"
+];
+
+// Utility to show JSON result nicely
+function showJSONOutput(obj) {
+  const outputBox = document.getElementById("outputBox");
+  outputBox.textContent = JSON.stringify(obj, null, 2);
+  outputBox.classList.remove("hidden");
+}
+
+// Set up model
+async function loadModel() {
+  const loader = document.getElementById("loader");
+  loader.textContent = "Loading model... please wait (first load may take 10–15s)";
+  model = await CLIP.from_pretrained("Xenova/clip-vit-base-patch32");
+  isModelLoaded = true;
+  loader.textContent = "Model loaded. You can now upload or capture images.";
+}
+
+// Handle classification
+async function classifyImage(imgElement) {
+  const loader = document.getElementById("loader");
+  const outputBox = document.getElementById("outputBox");
+  loader.textContent = "Classifying image...";
+  outputBox.classList.add("hidden");
+
+  if (!isModelLoaded) {
+    loader.textContent = "Loading model...";
+    await loadModel();
+  }
+
+  const { logits_per_image, text_embeds } = await model.predict({
+    image: imgElement,
+    text: LABELS
+  });
+
+  // Get best prediction
+  const probs = logits_per_image.softmax().data;
+  const maxIdx = probs.indexOf(Math.max(...probs));
+  const result = {
+    predicted_label: LABELS[maxIdx],
+    confidence: parseFloat(probs[maxIdx].toFixed(4)),
+    timestamp: new Date().toISOString()
+  };
+
+  showJSONOutput(result);
+  loader.textContent = "Done.";
+}
+
+// File upload handler
+document.addEventListener("DOMContentLoaded", () => {
+  const uploadInput = document.getElementById("uploadInput");
+  const preview = document.getElementById("preview");
+
+  uploadInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      preview.src = ev.target.result;
+      preview.classList.remove("hidden");
+      classifyImage(preview);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Camera capture
+  const captureBtn = document.getElementById("captureBtn");
+  const video = document.createElement("video");
+  captureBtn.addEventListener("click", async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      await video.play();
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0);
+      stream.getTracks().forEach(t => t.stop());
+      preview.src = canvas.toDataURL("image/png");
+      preview.classList.remove("hidden");
+      classifyImage(preview);
+    } catch (err) {
+      alert("Camera access failed: " + err.message);
+    }
+  });
+
+  // Preload model asynchronously
+  loadModel();
+});
+</script>
 </head>
-<body>
-  <div class="container">
-    <h1>Garbage Classifier</h1>
-    <p>Click a photo or upload an image to classify waste (runs fully in your browser).</p>
+<body class="bg-gray-900 text-white flex flex-col items-center p-6">
+  <h1 class="text-3xl font-bold mb-4">Garbage Segregation (Zero-Training)</h1>
 
-    <!-- Camera preview -->
-    <video id="camera" autoplay playsinline></video>
-    <canvas id="snapshot" style="display:none;"></canvas>
-
-    <!-- Buttons -->
-    <div class="btn-group">
-      <button id="captureBtn">📸 Capture Photo</button>
-      <label for="imageUpload" class="uploadBtn">📂 Upload Image</label>
-      <input type="file" id="imageUpload" accept="image/*" hidden />
-    </div>
-
-    <!-- Display results -->
-    <img id="preview" alt="Captured" />
-    <pre id="output"></pre>
+  <div class="flex flex-col items-center space-y-4">
+    <input id="uploadInput" type="file" accept="image/*" class="p-2 bg-gray-700 rounded" />
+    <button id="captureBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded shadow">
+      Capture Photo
+    </button>
+    <p id="loader" class="text-yellow-300 text-sm mt-2">Loading model...</p>
+    <img id="preview" class="hidden w-64 h-64 object-cover rounded-lg shadow-lg" alt="Preview" />
+    <pre id="outputBox" class="hidden bg-gray-800 p-4 rounded-lg mt-4 text-green-300 text-sm w-80 text-left overflow-auto"></pre>
   </div>
 </body>
 </html>
