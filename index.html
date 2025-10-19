@@ -3,121 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Garbage Segregation (Zero-Shot CLIP)</title>
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<title>Garbage Segregation Flask</title>
+<style>
+body { background:#1a1a1a; color:#fff; font-family:sans-serif; text-align:center; }
+img { max-width:400px; margin:10px; border:2px solid #4CAF50; }
+pre { background:#333; padding:10px; border-radius:5px; text-align:left; display:inline-block; max-width:90%; overflow:auto;}
+input, button { padding:10px; margin:10px; }
+</style>
 </head>
-<body class="bg-gray-900 text-white flex flex-col items-center p-6">
-  <h1 class="text-3xl font-bold mb-4 text-center">Garbage Segregation (Zero-Shot CLIP)</h1>
-  <p class="text-sm text-gray-300 mb-6 text-center">Upload or capture an image — output appears as JSON below.</p>
+<body>
+<h1>Garbage Segregation (YOLO + Flask)</h1>
 
-  <div class="flex flex-col items-center space-y-4">
-    <input id="uploadInput" type="file" accept="image/*" class="p-2 bg-gray-700 rounded">
-    <button id="captureBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded shadow">Capture Photo</button>
-    <p id="loader" class="text-yellow-300 text-sm mt-2">Loading model...</p>
-    <img id="preview" class="hidden w-64 h-64 object-cover rounded-lg shadow-lg" alt="Preview">
-    <pre id="outputBox" class="hidden bg-gray-800 p-4 rounded-lg mt-4 text-green-300 text-sm w-80 text-left overflow-auto"></pre>
-  </div>
+<form method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept="image/*" required>
+    <button type="submit">Upload & Classify</button>
+</form>
 
-<script type="module">
-import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2";
-
-// ==========================
-// MODEL LOADING
-// ==========================
-let classifier = null;
-let modelReady = false;
-const loader = document.getElementById("loader");
-
-async function loadModel() {
-  loader.textContent = "Loading model (this may take 10–20 seconds)...";
-  classifier = await pipeline("zero-shot-image-classification", "Xenova/clip-vit-base-patch32");
-  loader.textContent = "Model loaded. You can now upload or capture images.";
-  modelReady = true;
-}
-loadModel();
-
-// ==========================
-// LABELS / PROMPTS
-// ==========================
-const LABELS = [
-  "biodegradable waste such as food scraps, leaves, or vegetable peels",
-  "non biodegradable waste such as plastic, glass, or metal",
-  "recyclable waste such as paper, cardboard, or bottles",
-  "organic waste like fruit or vegetable matter",
-  "plastic waste like bottles, wrappers, or bags",
-  "metal waste such as cans, wires, or tools",
-  "paper waste such as newspapers or cartons",
-  "glass waste such as jars, bulbs, or bottles"
-];
-
-// ==========================
-// CLASSIFICATION
-// ==========================
-async function classifyImage(imgEl) {
-  if (!modelReady) {
-    loader.textContent = "Still loading model...";
-    return;
-  }
-
-  loader.textContent = "Classifying image...";
-  const outputBox = document.getElementById("outputBox");
-  outputBox.classList.add("hidden");
-
-  const result = await classifier(imgEl, LABELS);
-  const top = result[0];
-
-  const response = {
-    predicted_label: top.label,
-    confidence: Number(top.score.toFixed(4)),
-    all_scores: Object.fromEntries(result.map(r => [r.label, Number(r.score.toFixed(4))])),
-    timestamp: new Date().toISOString()
-  };
-
-  loader.textContent = "Done.";
-  outputBox.textContent = JSON.stringify(response, null, 2);
-  outputBox.classList.remove("hidden");
-}
-
-// ==========================
-// IMAGE UPLOAD HANDLERS
-// ==========================
-const uploadInput = document.getElementById("uploadInput");
-const preview = document.getElementById("preview");
-const captureBtn = document.getElementById("captureBtn");
-
-uploadInput.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    preview.src = ev.target.result;
-    preview.classList.remove("hidden");
-    classifyImage(preview);
-  };
-  reader.readAsDataURL(file);
-});
-
-captureBtn.addEventListener("click", async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    const video = document.createElement("video");
-    video.srcObject = stream;
-    await video.play();
-
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
-    stream.getTracks().forEach(t => t.stop());
-
-    preview.src = canvas.toDataURL("image/png");
-    preview.classList.remove("hidden");
-    classifyImage(preview);
-  } catch (err) {
-    alert("Camera access failed: " + err.message);
-  }
-});
-</script>
+{% if output_image_url %}
+<h2>Detected Image</h2>
+<img src="{{ url_for('static', filename='uploads/' + output_image_url.split('/')[-1]) }}" alt="Detected Image">
+<h2>JSON Output</h2>
+<pre>{{ result_json | tojson(indent=2) }}</pre>
+{% endif %}
 </body>
 </html>
