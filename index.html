@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zero-Shot Garbage Classifier</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module" src="script.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Garbage Classifier</h1>
+    <p>Click a photo or upload an image to classify waste (runs fully in your browser).</p>
+
+    <!-- Camera preview -->
+    <video id="camera" autoplay playsinline></video>
+    <canvas id="snapshot" style="display:none;"></canvas>
+
+    <!-- Buttons -->
+    <div class="btn-group">
+      <button id="captureBtn">📸 Capture Photo</button>
+      <label for="imageUpload" class="uploadBtn">📂 Upload Image</label>
+      <input type="file" id="imageUpload" accept="image/*" hidden />
+    </div>
+
+    <!-- Display results -->
+    <img id="preview" alt="Captured" />
+    <pre id="output"></pre>
+  </div>
+</body>
+</html>
