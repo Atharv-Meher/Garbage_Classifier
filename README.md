@@ -1,1 +1,1 @@
-Starting our Waste Segregation powered by digital Image processing.
+Starting our Waste Segregation project powered by digital Image processing.
